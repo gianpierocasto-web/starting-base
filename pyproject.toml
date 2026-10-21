@@ -1,0 +1,19 @@
+[project]
+name = "starting-base"
+version = "0.1.0"
+description = "MCP che dice se awesome-reverse-engineered ha già una base di partenza"
+readme = "README.md"
+authors = [
+    { name = "Gianpiero", email = "saliceforte@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "mcp>=2.3.0",
+]
+
+[project.scripts]
+starting-base = "starting_base.server:main"
+
+[build-system]
+requires = ["uv_build>=0.9.30,<0.10.0"]
+build-backend = "uv_build"

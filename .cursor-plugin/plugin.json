@@ -1,0 +1,14 @@
+{
+  "name": "starting-base",
+  "displayName": "Starting Base",
+  "version": "0.1.0",
+  "description": "Cerca in awesome-reverse-engineered se esiste già una base open source. Skill e server MCP nello stesso plugin.",
+  "author": {
+    "name": "Gianpiero",
+    "email": "saliceforte@gmail.com"
+  },
+  "repository": "https://github.com/gianpierocasto-web/starting-base",
+  "keywords": ["mcp", "reverse-engineering", "awesome-reverse-engineered"],
+  "skills": "./skills/",
+  "mcpServers": "./mcp.json"
+}

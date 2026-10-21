@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "starting-base": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "${CURSOR_PLUGIN_ROOT}",
+        "starting-base"
+      ]
+    }
+  }
+}

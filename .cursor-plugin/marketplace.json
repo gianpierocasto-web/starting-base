@@ -1,0 +1,17 @@
+{
+  "name": "starting-base",
+  "owner": {
+    "name": "Gianpiero",
+    "email": "saliceforte@gmail.com"
+  },
+  "metadata": {
+    "description": "Cerca in awesome-reverse-engineered se esiste già una base open source."
+  },
+  "plugins": [
+    {
+      "name": "starting-base",
+      "source": "./",
+      "description": "Skill e server MCP per capire se esiste già una base open source da cui partire."
+    }
+  ]
+}
