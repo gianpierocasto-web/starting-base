@@ -731,25 +731,80 @@ def github_readme(url: str) -> str | None:
     match = re.match(r"https?://github\.com/([^/]+)/([^/#?]+)", url)
     if not match:
         return None
-    request = urllib.request.Request(
-        f"https://api.github.com/repos/{match.group(1)}/{match.group(2)}/readme",
-        headers={
-            "Accept": "application/vnd.github.raw",
-            "User-Agent": "starting-base",
-        },
-    )
+    headers = {
+        "Accept": "application/vnd.github.raw",
+        "User-Agent": "starting-base",
+    }
     token = github_token()
     if token:
-        request.add_header("Authorization", f"Bearer {token}")
+        headers["Authorization"] = f"Bearer {token}"
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
-            raw = response.read(120_000)
+        raw = fetch_bytes(
+            f"https://api.github.com/repos/{match.group(1)}/{match.group(2)}/readme",
+            headers=headers,
+            timeout=20,
+            limit=120_000,
+        )
     except (urllib.error.URLError, TimeoutError, OSError):
         return None
     text = raw.decode("utf-8", "replace")
     if text.lstrip().startswith("{") and '"message"' in text[:180]:
         return None
     return text
+
+
+def socket_forbidden(exc: BaseException) -> bool:
+    if getattr(exc, "winerror", None) == 10013:
+        return True
+    reason = getattr(exc, "reason", None)
+    if isinstance(reason, BaseException) and reason is not exc:
+        return socket_forbidden(reason)
+    return False
+
+
+def fetch_bytes(
+    url: str,
+    headers: dict[str, str] | None = None,
+    timeout: int = 60,
+    limit: int | None = None,
+) -> bytes:
+    request_headers = {"User-Agent": "starting-base"}
+    if headers:
+        request_headers.update(headers)
+    request = urllib.request.Request(url, headers=request_headers)
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return response.read() if limit is None else response.read(limit)
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        if not socket_forbidden(exc):
+            raise
+        logger.warning("socket negato a Python, riprovo con curl: %s", exc)
+        return curl_bytes(url, request_headers, timeout, limit)
+
+
+def curl_bytes(url: str, headers: dict[str, str], timeout: int, limit: int | None) -> bytes:
+    command = [
+        "curl.exe",
+        "--fail",
+        "--silent",
+        "--show-error",
+        "--location",
+        "--max-time",
+        str(timeout),
+    ]
+    for key, value in headers.items():
+        command.extend(["--header", f"{key}: {value}"])
+    command.append(url)
+    try:
+        result = subprocess.run(command, capture_output=True, timeout=timeout + 5)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise urllib.error.URLError(str(exc)) from exc
+    if result.returncode != 0:
+        detail = result.stderr.decode("utf-8", "replace").strip() or f"curl {result.returncode}"
+        raise urllib.error.URLError(detail)
+    if limit is None:
+        return result.stdout
+    return result.stdout[:limit]
 
 
 def github_token() -> str:
@@ -802,8 +857,7 @@ def ensure_cache() -> Path:
     if fresh:
         return CACHE
     try:
-        with urllib.request.urlopen(RAW_INDEX, timeout=60) as response:
-            payload = response.read()
+        payload = fetch_bytes(RAW_INDEX, timeout=60)
         CACHE.parent.mkdir(parents=True, exist_ok=True)
         temporary = CACHE.with_suffix(".json.tmp")
         temporary.write_bytes(payload)
